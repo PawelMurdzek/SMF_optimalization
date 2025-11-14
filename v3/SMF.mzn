@@ -1,58 +1,79 @@
-% smf_orchestration.mzn
+% smf_orchestration_objective.mzn
 
-int: J; % liczba obszarów
-int: K; % liczba kandydatów na lokalizacje SMF
+int: J; 
+int: K; 
+int: R; 
 
-array[1..J] of int: pop;          % populacja w obszarach
-array[1..J] of float: req_per_person; % żądania/s na osobę
-float: tau; % średni czas trwania sesji [s]
+% --- Resources & Topology ---
+array[1..K, 1..R] of float: loc_resources;  
+array[1..R] of float: smf_req;              
+array[1..J, 1..K] of bool: connected;       
 
-% Obliczenie parametrów ruchu (zmienna pomocnicza, nie decyzyjna)
+% --- Standard Data ---
+array[1..J] of int: pop;
+array[1..J] of float: req_per_person;
+float: tau;
 array[1..J] of float: active_sessions = [ pop[j] * req_per_person[j] * tau | j in 1..J ];
 
-array[1..K] of float: latency;    % pomocnicze 
-array[1..K,1..J] of float: latency_kj; % opóźnienie lokalizacja k -> obszar j [ms]
-float: Lmax; % dopuszczalne opóźnienie [ms]
+array[1..K,1..J] of float: latency_kj; 
+float: Lmax;
+int: C; 
+int: Nmin;
 
-int: C;                % pojemność jednej instancji SMF (liczba sesji)
-int: Nmin;             % minimalna liczba instancji na lokalizację
-int: Nmax;             % maksymalna liczba instancji na lokalizację
+float: cost_per_instance;
 
-float: cost_per_instance; % koszt jednej instancji
-float: alpha_scale;       % parametr kary za skalowanie
+% --- Optimization Weights (NEW) ---
+float: weight_cost;    % Priority for saving money
+float: weight_latency; % Priority for speed (latency)
 
-% --- zmienne decyzyjne ---
-array[1..K] of var 0..Nmax: x;         % ile instancji na lokalizacji k
-array[1..J,1..K] of var 0..1: assign;  % przypisanie obszaru j do lokalizacji k (0/1)
+% --- Decision Variables ---
+array[1..K] of var int: x;             
+array[1..J,1..K] of var 0..1: assign;
 
-% 1. Każdy obszar przypisany do dokładnie jednej lokalizacji
+% --- Constraints ---
 constraint forall(j in 1..J) ( sum(k in 1..K)(assign[j,k]) = 1 );
 
-% 2. Przypisanie do lokalizacji dozwolone tylko jeśli latency <= Lmax
 constraint forall(j in 1..J, k in 1..K) (
     assign[j,k] = 1 -> latency_kj[k,j] <= Lmax
 );
 
-% 3. Zasada pojemności (POPRAWIONA): 
-% Suma aktywnych sesji ze wszystkich obszarów przypisanych do k 
-% musi być mniejsza lub równa pojemności instancji w k.
+constraint forall(j in 1..J, k in 1..K) (
+    assign[j,k] = 1 -> connected[j,k] = true
+);
+
 constraint forall(k in 1..K)(
     sum(j in 1..J)( assign[j,k] * active_sessions[j] ) <= x[k] * C
 );
 
-% 4. Minimalna/maksymalna liczba instancji (zapewnione przez dziedzinę zmiennej x, ale dodajemy Nmin)
-constraint forall(k in 1..K)(
-    x[k] >= Nmin
+constraint forall(k in 1..K, r in 1..R)(
+    x[k] * smf_req[r] <= loc_resources[k,r]
 );
 
-% Funkcja celu: minimalizuj koszt utrzymania instancji
+constraint forall(k in 1..K)( x[k] >= Nmin );
+
+% --- OBJECTIVE FUNCTION CALCULATION ---
+
+% 1. Financial Cost
 var float: total_cost = sum(k in 1..K)( cost_per_instance * x[k] );
 
-solve minimize total_cost;
+% 2. Average System Latency
+% (Sum of latency for every single session) / (Total number of sessions)
+float: total_sessions = sum(active_sessions);
+var float: total_latency_mass = sum(j in 1..J, k in 1..K)(
+    assign[j,k] * active_sessions[j] * latency_kj[k,j]
+);
+var float: avg_latency = total_latency_mass / total_sessions;
+
+% 3. Combined Objective
+% We minimize the weighted sum of both
+solve minimize (weight_cost * total_cost) + (weight_latency * avg_latency);
 
 output [
-  "x = " ++ show(x) ++ "\n",
-  "assign = " ++ show(assign) ++ "\n",
-  "active_sessions = " ++ show(active_sessions) ++ "\n",
-  "total_cost = " ++ show(total_cost) ++ "\n"
+  "--- RESULTS ---\n",
+  "Instances (x): " ++ show(x) ++ "\n",
+  "Assignments: \n" ++ show2d(assign) ++ "\n",
+  "--- METRICS ---\n",
+  "Total Cost ($): " ++ show(total_cost) ++ "\n",
+  "Avg Latency (ms): " ++ show(avg_latency) ++ "\n",
+  "Weighted Score: " ++ show((weight_cost * total_cost) + (weight_latency * avg_latency))
 ];
