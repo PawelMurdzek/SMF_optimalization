@@ -24,12 +24,13 @@ float: cost_per_instance;
 % --- Weights for Multi-Objective Optimization ---
 float: weight_cost;    
 float: weight_latency; 
-float: weight_balance; % NEW: Priority for load balancing
+float: weight_balance; 
 
 % --- Decision Variables ---
-array[1..K] of var int: x;             
+% FIX: Added explicit upper bound (0..100) to prevent 'Number out of limits' error
+array[1..K] of var 0..100: x;             
 array[1..J,1..K] of var 0..1: assign;
-var 0.0..1.0: max_util; % NEW: Tracks the highest utilization %
+var 0.0..1.0: max_util; 
 
 % --- Constraints ---
 
@@ -47,10 +48,9 @@ constraint forall(k in 1..K, r in 1..R)(
 );
 constraint forall(k in 1..K)( x[k] >= Nmin );
 
-% 3. LOAD BALANCING CONSTRAINT (NEW)
-% The load on ANY server k must be less than max_util * capacity.
-% This forces max_util to be at least as high as the busiest server.
-% By minimizing max_util in the objective, we flatten the peaks.
+% 3. LOAD BALANCING CONSTRAINT
+% Forces max_util to be >= the utilization of the busiest server
+% Note: We multiply x[k] * C * max_util. Since x is now bounded, this is safe.
 constraint forall(k in 1..K)(
     sum(j in 1..J)( assign[j,k] * active_sessions[j] ) <= max_util * (x[k] * C)
 );
@@ -67,15 +67,10 @@ var float: avg_latency = sum(j in 1..J, k in 1..K)(
 ) / total_sessions;
 
 % C. Balance (Utilization)
-% We just use 'max_util' directly. 
-% If max_util is 0.9 (90%), it penalizes the score. 
-% If we lower it to 0.5 (50%), the score improves.
-
 solve minimize 
     (weight_cost * total_cost) + 
     (weight_latency * avg_latency) + 
     (weight_balance * max_util * 100); 
-    % Multiplied by 100 so it's on a similar scale (0-100) to latency/cost
 
 output [
   "--- RESULTS ---\n",
@@ -84,5 +79,6 @@ output [
   "Peak Utilization: " ++ show(max_util * 100) ++ "%\n",
   "--- METRICS ---\n",
   "Total Cost: " ++ show(total_cost) ++ "\n",
-  "Avg Latency: " ++ show(avg_latency) ++ "\n"
+  "Avg Latency: " ++ show(avg_latency) ++ "\n",
+  "Objective Score: " ++ show((weight_cost * total_cost) + (weight_latency * avg_latency) + (weight_balance * max_util * 100)) ++ "\n"
 ];
