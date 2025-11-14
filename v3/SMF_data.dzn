@@ -3,34 +3,25 @@ K = 2;
 R = 2; 
 
 smf_req = [2.0, 4.0];
-loc_resources = array2d(1..2, 1..2, [
-    20.0, 64.0,  
-    4.0,   8.0   
-]);
-
-connected = array2d(1..3, 1..2, [
-    true, true,  
-    true, true,  
-    true, false  
-]);
+loc_resources = array2d(1..2, 1..2, [ 20.0, 64.0, 4.0, 8.0 ]);
+connected = array2d(1..3, 1..2, [ true, true, true, true, true, false ]);
 
 pop = [100000, 50000, 20000];
 req_per_person = [0.00002, 0.00003, 0.000015];
 tau = 600.0;
 
-latency_kj = array2d(1..2, 1..3,
-  [ 10.0, 20.0, 150.0,   
-    70.0, 40.0, 30.0 ]);
+latency_kj = array2d(1..2, 1..3, [ 10.0, 20.0, 150.0, 70.0, 40.0, 30.0 ]);
 
 Lmax = 100.0;
 C = 10000; 
 Nmin = 0;
 cost_per_instance = 1.0;
 
-% --- NEW WEIGHTS ---
-% Scenario A: "Cheap" (Focus on Cost) -> set cost=10.0, latency=0.1
-% Scenario B: "Fast" (Focus on Latency) -> set cost=0.1, latency=10.0
-% Scenario C: Balanced -> set both to 1.0
-
+% --- WEIGHTS CONFIGURATION ---
 weight_cost = 1.0;    
-weight_latency = 0.5;
+weight_latency = 1.0; 
+
+% High balance weight forces the solver to provision EXTRA instances 
+% just to keep utilization low (e.g., 50%). 
+% Low weight allows servers to run hot (99%).
+weight_balance = 5.0;
