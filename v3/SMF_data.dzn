@@ -1,0 +1,20 @@
+J = 3; % Obszary ruchowe np. miasta czy regiony
+K = 2; % Możliwe lokalizacje SMF np. 2 dla operatora
+pop = [100000, 50000, 20000]; % Populacja
+req_per_person = [0.00002, 0.00003, 0.000015]; % żądania/s na osobę (przykładowo)
+% TODO: podmienić na ruch w lokalizacji
+tau = 600.0; % średni czas trwania sesji 600 s (10 min)
+
+% przykładowe opóźnienia k->j w ms
+latency = [50.0, 40.0];
+
+latency_kj = array2d(1..2,1..3,
+  [ 10.0, 20.0, 150.0,   % k=1  (dobry dla j1,j2, zły dla j3)
+    70.0, 40.0, 30.0 ]); % k=2
+
+Lmax = 100.0;  % dopuszczalne opóźnienie 100 ms
+C = 10000;     % 1 instancja obsługuje 10k sesji
+Nmin = 0;
+Nmax = 10;
+cost_per_instance = 1.0;
+alpha_scale = 0.0;
