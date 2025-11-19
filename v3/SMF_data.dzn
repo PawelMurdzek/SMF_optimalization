@@ -39,4 +39,4 @@ cost_per_instance = 1.0;
 % --- KONFIGURACJA WAG ---
 weight_cost = 10.0;     % Koszt infrastruktury jest ważny
 weight_latency = 5.0;   % Opóźnienia są ważne
-weight_balance = 0.0;   %200.0; % Bardzo wysoka waga balansu wymusi rozłożenie ruchu
+weight_balance = 0.0;   %200.0; % Waga balansu serwera - wysoka wymusi rozłożenie ruchu
