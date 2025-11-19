@@ -1,30 +1,42 @@
-J = 3; 
-K = 2; 
-R = 2; 
+% SMF_data.dzn
 
-smf_req = [2.0, 4.0];
-loc_resources = array2d(1..2, 1..2, [ 20.0, 64.0, 4.0, 8.0 ]);
-connected = array2d(1..3, 1..2, [
-    true, true,  % Region 1
-    true, true,  % Region 2
-    true, false   % Region 3
+J = 3; % 3 Regiony
+K = 2; % 2 Lokalizacje (Datacenter)
+R = 2; % CPU, RAM
+
+smf_req = [2.0, 4.0]; % Wymagania na 1 instancję SMF
+
+% Zasoby w lokalizacjach (Lok 1 mała, Lok 2 duża)
+loc_resources = array2d(1..2, 1..2, [ 
+    20.0, 64.0,   % Lokalizacja 1 (mało zasobów)
+    100.0, 200.0  % Lokalizacja 2 (dużo zasobów)
 ]);
+
+% Połączenia (Connectivity)
+connected = array2d(1..3, 1..2, [
+    true, true,  % Region 1 ma dostęp do obu
+    true, true,  % Region 2 ma dostęp do obu
+    true, true   % Region 3 ma dostęp do obu
+]);
+
+% Populacja i sesje
 pop = [100000, 50000, 20000];
-req_per_person = [0.00002, 0.00003, 0.000015];
+req_per_person = [0.002, 0.003, 0.0015]; % Zwiększyłem lekko, żeby wymusić ruch
 tau = 600.0;
 
-latency_kj = array2d(1..2, 1..3, [ 10.0, 20.0, 150.0, 70.0, 40.0, 30.0 ]);
+% Opóźnienia (Latency) [Lokalizacja, Region]
+% Lok 1 jest "blisko" Regionu 1. Lok 2 jest "daleko" od Regionu 1.
+latency_kj = array2d(1..2, 1..3, [ 
+     10.0,  20.0, 150.0,  % Lok 1 (blisko R1, średnio R2, daleko R3)
+     50.0,  30.0,  20.0   % Lok 2 (daleko R1, średnio R2, blisko R3)
+]);
 
 Lmax = 200.0;
-C = 10000; 
+C = 50000; % Pojemność jednej instancji (sesje)
 Nmin = 0;
 cost_per_instance = 1.0;
 
-% --- WEIGHTS CONFIGURATION ---
-weight_cost = 1.0;    
-weight_latency = 1.0; 
-
-% High balance weight forces the solver to provision EXTRA instances 
-% just to keep utilization low (e.g., 50%). 
-% Low weight allows servers to run hot (99%).
-weight_balance = 5.0;
+% --- KONFIGURACJA WAG ---
+weight_cost = 10.0;     % Koszt infrastruktury jest ważny
+weight_latency = 5.0;   % Opóźnienia są ważne
+weight_balance = 0.0;   %200.0; % Bardzo wysoka waga balansu wymusi rozłożenie ruchu
