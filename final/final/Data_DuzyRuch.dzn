@@ -1,0 +1,49 @@
+J = 5; % 5 Regionów 
+K = 3; % 3 Lokalizacje/Datacenter 
+R = 3; % 3 Zasoby (1: CPU, 2: RAM, 3: SSD)
+
+% Wymagania zasobowe na 1 instancję SMF (CPU (Rdzenie), RAM (GB), SSD (GB))
+smf_req = [2.0, 4.0, 10.0]; 
+
+% --- ZASOBY W LOKALIZACJACH (LOC_RESOURCES) ---
+% Zróżnicowane Datacentra:  (Małe/Droższe),  (Duże/Standard),  (Średnie/Nowe)
+loc_resources = array2d(1..K, 1..R, [ 
+    30.0,  96.0,  300.0,  % Lokalizacja 1 (małe/umiarkowane zasoby)
+    120.0, 384.0, 1500.0, % Lokalizacja 2 (duże zasoby)
+    60.0,  192.0, 600.0   % Lokalizacja 3 (średnie zasoby)
+]);
+
+% --- POŁĄCZENIA (CONNECTIVITY) ---
+% Nie każdy region ma dostęp do każdej lokalizacji (np. z powodu regulacji, kontraktów)
+connected = array2d(1..J, 1..K, [
+    true,  false, true,  % Region 1 
+    false, true,  true,  % Region 2 
+    true,  true,  true,  % Region 3 
+    true,  true,  false, % Region 4 
+    true,  true,  true   % Region 5 
+]);
+
+% --- POPULACJA I SESJE (WYMAGANIA) ---
+pop = [200000, 350000, 160000, 90000, 300000]; % Różna wielkość populacji regionów
+req_per_person = [0.002, 0.003, 0.0015, 0.0025, 0.001]; % Różna aktywność użytkowników
+tau = 600.0; % Czas trwania sesji (nie zmieniam)
+
+% --- OPÓŹNIENIA (LATENCY) [Lokalizacja, Region] ---
+% L1 daleko od L2/3
+% L2 daleko od L1/3
+% L3 daleko od L1/2
+latency_kj = array2d(1..K, 1..J, [ 
+     10.0,  80.0, 180.0, 150.0, 20.0,  % Lok 1 
+     70.0,  20.0, 150.0,  90.0, 80.0,  % Lok 2 
+    180.0, 150.0,  30.0, 220.0, 170.0  % Lok 3 
+]);
+
+Lmax = 100.0; % Ograniczenie opóźnienia jest zaostrzone
+C = 50000;    % Pojemność jednej instancji (sesje)
+Nmin = 1;     % Wymóg minimum 1 instancji dla redundancji w każdej używanej lokalizacji
+cost_per_instance = 1.0; % Koszt bazowy instancji (można rozszerzyć o koszt zależny od lokalizacji)
+
+% --- KONFIGURACJA WAG FUNKCJI CELU ---
+weight_cost = 10.0;     % Koszt infrastruktury (instancji) - ważny
+weight_latency = 50.0;  % Opóźnienia są KRYTYCZNIE ważne (ze względu na obostrzenie Lmax)
+weight_balance = 30.0; % Waga balansu serwera - wysoka wymusi optymalne rozłożenie ruchu, ale 0 daje lepsze zużycie zasobów
