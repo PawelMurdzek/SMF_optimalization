@@ -1,0 +1,47 @@
+J = 5; % 5 Regionów 
+K = 3; % 3 Lokalizacje (DC)
+R = 3; % 3 Zasoby (CPU, RAM, SSD)
+
+% Wymagania zasobowe na 1 instancję SMF (CPU [rdzenie], RAM [GB], SSD [GB])
+smf_req = [2.0, 4.0, 10.0]; 
+
+% --- ZASOBY W LOKALIZACJACH ---
+% DC1 (Małe), DC2 (Duże), DC3 (Średnie)
+loc_resources = [|
+    40.0,  120.0,  400.0 |  % DC 1 (Max ok. 20 instancji wg CPU)
+    120.0, 400.0, 1500.0 |  % DC 2 (Duże zasoby)
+    80.0,  250.0,  800.0 |  % DC 3 (Średnie zasoby)
+|];
+
+% --- POŁĄCZENIA ---
+connected = [|
+    true,  false, true,  | % Region 1 
+    false, true,  true,  | % Region 2 
+    true,  true,  true,  | % Region 3 
+    true,  true,  false, | % Region 4 
+    true,  true,  true   | % Region 5 
+|];
+
+% --- POPULACJA I PARAMETRY RUCHU ---
+% Obliczanie lambda_i: pop * req_per_person
+pop = [80000, 120000, 50000, 30000, 100000]; 
+req_per_person = [0.002, 0.003, 0.0015, 0.0025, 0.001]; 
+
+% tau = 1/mu (średni czas obsługi w sekundach)
+tau = 600.0; 
+
+% --- OPÓŹNIENIA (LATENCY) [DC, Region] ---
+latency_kj = [|
+     10.0,  80.0, 180.0, 150.0, 20.0, | % DC 1 
+     70.0,  20.0, 150.0,  90.0, 80.0, | % DC 2 
+    180.0, 150.0,  30.0, 220.0, 170.0 | % DC 3 
+|];
+
+Lmax = 100.0; % Ograniczenie opóźnienia
+Nmin = 1;     % Minimum 1 instancja dla redundancji w aktywnym DC
+cost_per_instance = 10.0; % Koszt bazowy instancji
+
+% --- KONFIGURACJA WAG ---
+weight_cost = 10.0;     
+weight_latency = 50.0;  
+weight_balance = 5.0; % Dodano lekką wagę balansu dla lepszego rozkładu
