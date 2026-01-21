@@ -29,13 +29,13 @@ float: weight_balance;
 % 2. TABELA ERLANGA B (Wybór scenariusza)
 % --------------------------
 
-% Wybierz scenariusz badania (zgodnie z obrazkiem):
+% Scenariusz badania:
 % 1 -> Projekt 1 (B = 1.0%, Dostępność 0.99)
 % 2 -> Projekt 2a (B = 0.1%, Dostępność 0.999)
 % 3 -> Projekt 2b (B = 0.01%, Dostępność 0.9999)
 int: scenario; 
 
-% Tabela dla B = 1.0% (Twoja obecna - bazowa)
+% Tabela dla B = 1.0%
 array[1..20] of float: table_1_pct = [
     0.0101, 0.1526, 0.4555, 0.8694, 1.361,   % N: 1-5
     1.909,  2.501,  3.128,  3.783,  4.461,   % N: 6-10
@@ -43,7 +43,7 @@ array[1..20] of float: table_1_pct = [
     8.875,  9.652,  10.44,  11.23,  12.03    % N: 16-20
 ];
 
-% Tabela dla B = 0.1% (Dostępność 0.999 - Wymaganie z obrazka)
+% Tabela dla B = 0.1%
 array[1..20] of float: table_01_pct = [
     0.0010, 0.0458, 0.1938, 0.4393, 0.7621,  % N: 1-5
     1.146,  1.579,  2.051,  2.558,  3.092,   % N: 6-10
@@ -51,7 +51,7 @@ array[1..20] of float: table_01_pct = [
     6.722,  7.378,  8.046,  8.724,  9.412    % N: 16-20
 ];
 
-% Tabela dla B = 0.01% (Dostępność 0.9999 - Wymaganie z obrazka)
+% Tabela dla B = 0.01%
 array[1..20] of float: table_001_pct = [
     0.0001, 0.0142, 0.0868, 0.2347, 0.4520,  % N: 1-5
     0.7282, 1.050,  1.408,  1.798,  2.218,   % N: 6-10
