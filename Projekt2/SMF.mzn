@@ -26,22 +26,44 @@ float: weight_latency;
 float: weight_balance;
 
 % --------------------------
-% 2. TABELA ERLANGA B (Stałe z obrazka)
+% 2. TABELA ERLANGA B (Wybór scenariusza)
 % --------------------------
 
-% Wybieramy kolumnę dla B = 1.0% (prawdopodobieństwo blokady 1%)
-% Indeks tablicy odpowiada liczbie N (instancji/kanałów) od 1 do 20
-array[1..20] of float: erlang_table = [
+% Wybierz scenariusz badania (zgodnie z obrazkiem):
+% 1 -> Projekt 1 (B = 1.0%, Dostępność 0.99)
+% 2 -> Projekt 2a (B = 0.1%, Dostępność 0.999)
+% 3 -> Projekt 2b (B = 0.01%, Dostępność 0.9999)
+int: scenario; 
+
+% Tabela dla B = 1.0% (Twoja obecna - bazowa)
+array[1..20] of float: table_1_pct = [
     0.0101, 0.1526, 0.4555, 0.8694, 1.361,   % N: 1-5
     1.909,  2.501,  3.128,  3.783,  4.461,   % N: 6-10
     5.160,  5.876,  6.607,  7.352,  8.108,   % N: 11-15
     8.875,  9.652,  10.44,  11.23,  12.03    % N: 16-20
 ];
 
-% Ponieważ Twoja populacja generuje tysiące sesji, a tabela Erlanga 
-% operuje na jednostkach, wprowadzamy mnożnik wydajności.
-% Przykład: "1 jednostka w tabeli Erlanga = 10 000 rzeczywistych sesji"
-float: capacity_scale = 40000.0; 
+% Tabela dla B = 0.1% (Dostępność 0.999 - Wymaganie z obrazka)
+array[1..20] of float: table_01_pct = [
+    0.0010, 0.0458, 0.1938, 0.4393, 0.7621,  % N: 1-5
+    1.146,  1.579,  2.051,  2.558,  3.092,   % N: 6-10
+    3.650,  4.231,  4.830,  5.446,  6.077,   % N: 11-15
+    6.722,  7.378,  8.046,  8.724,  9.412    % N: 16-20
+];
+
+% Tabela dla B = 0.01% (Dostępność 0.9999 - Wymaganie z obrazka)
+array[1..20] of float: table_001_pct = [
+    0.0001, 0.0142, 0.0868, 0.2347, 0.4520,  % N: 1-5
+    0.7282, 1.050,  1.408,  1.798,  2.218,   % N: 6-10
+    2.665,  3.138,  3.635,  4.155,  4.695,   % N: 11-15
+    5.254,  5.830,  6.423,  7.032,  7.656    % N: 16-20
+];
+
+% Wybór aktywnej tabeli na podstawie zmiennej 'scenario'
+array[1..20] of float: erlang_table = 
+    if scenario == 1 then table_1_pct
+    elseif scenario == 2 then table_01_pct
+    else table_001_pct endif; 
 
 % --------------------------
 % 3. PARAMETRY PRZELICZANE
@@ -92,7 +114,7 @@ constraint forall(j in 1..J, k in 1..K)(
 % POJEMNOŚĆ ERLANGA: Ruch w lokalizacji k nie może przekroczyć wartości z tabeli dla N instancji
 constraint forall(k in 1..K)(
     if x[k] > 0 then
-        sum(j in 1..J)(flow[j,k]) <= erlang_table[x[k]] * capacity_scale
+        sum(j in 1..J)(flow[j,k]) <= erlang_table[x[k]]
     else
         sum(j in 1..J)(flow[j,k]) = 0.0
     endif
@@ -111,7 +133,7 @@ constraint forall(k in 1..K)(
 % LOAD BALANCING: Obliczanie maksymalnego stopnia wykorzystania kanałów Erlanga
 constraint forall(k in 1..K)(
     if x[k] > 0 then
-        sum(j in 1..J)(flow[j,k]) <= max_util * (erlang_table[x[k]] * capacity_scale)
+        sum(j in 1..J)(flow[j,k]) <= max_util * (erlang_table[x[k]])
     else true endif
 );
 
@@ -144,7 +166,7 @@ output [
 ] ++
 [
   "   DC " ++ show(k) ++ ": " ++ show(x[k]) ++ " instancji | Pojemność Erlanga: " ++ 
-  (if fix(x[k]) > 0 then show_float(7, 2, erlang_table[fix(x[k])] * capacity_scale) else "0.00" endif) ++ " sesji\n"
+  (if fix(x[k]) > 0 then show_float(7, 2, erlang_table[fix(x[k])]) else "0.00" endif) ++ " sesji\n"
   | k in 1..K
 ] ++
 [
