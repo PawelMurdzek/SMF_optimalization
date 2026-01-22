@@ -59,6 +59,7 @@ array[1..20] of float: table_001_pct = [
     5.254,  5.830,  6.423,  7.032,  7.656    % N: 16-20
 ];
 
+%@PM mnozymy indeks tablicy - czyli 
 % Wybór aktywnej tabeli na podstawie zmiennej 'scenario'
 array[1..20] of float: erlang_table = 
     if scenario == 1 then table_1_pct
@@ -96,7 +97,9 @@ array[1..K] of var 0..20: x;                   % Liczba instancji N w lokalizacj
 array[1..J,1..K] of var 0.0..total_traffic: flow; % Przepływ ruchu (w Erlangach)
 
 var 0.0..1.0: max_util;                        % Wykorzystanie pojemności Erlangowskiej
-
+%max_util[0,0,1,0,0,0,0]
+%@PM max_util if regional_traffic_erlangs < tablcia_erlang[N] 0 else 1 potem 0
+%@PM sum(max_util) = 1
 % --------------------------
 % 5. OGRANICZENIA
 % --------------------------
@@ -109,33 +112,42 @@ constraint forall(j in 1..J)(
 % DOSTĘPNOŚĆ I LATENCY: Ruch płynie tylko tam, gdzie jest połączenie i niskie opóźnienie
 constraint forall(j in 1..J, k in 1..K)(
     if not possible_flow[j,k] then flow[j,k] = 0.0 else true endif
+    %possible_flow[j,k] > 0
 );
+%to usunac
 
 % POJEMNOŚĆ ERLANGA: Ruch w lokalizacji k nie może przekroczyć wartości z tabeli dla N instancji
 constraint forall(k in 1..K)(
-    if x[k] > 0 then
-        sum(j in 1..J)(flow[j,k]) <= erlang_table[x[k]]
-    else
-        sum(j in 1..J)(flow[j,k]) = 0.0
-    endif
+%    if x[k] > 0 then
+        sum(j in 1..J)(flow[j,k]) <= total_traffic[j,k] %@PM to przetestowac
+        %@PM a jak nie to max_util * erlang_table[1] - wartosci kolumny A
+%    else
+%        sum(j in 1..J)(flow[j,k]) = 0.0
+%    endif
 );
+%@PM tu dodac erlang_table[x[k]] * possible_flow i Tablica J, K
+%@PM zamienic tablice connectd na 0
+constraint forall(k in 1..K){
+   x[k] >= Nmin
+}
 
 % LIMIT HARDWARE: Nie możemy postawić więcej instancji niż pozwalają zasoby (CPU/RAM/SSD)
 constraint forall(k in 1..K)(
     x[k] <= max_N[k]
 );
 
-% REDUNDANCJA: Jeśli lokalizacja jest używana, musi mieć co najmniej Nmin instancji
-constraint forall(k in 1..K)(
-    x[k] > 0 -> x[k] >= Nmin
+constraint forall(j in 1..J, k in 1..K)(
+    x[k] * smf_req[j] <= loc_resources[k,j]
 );
+%ograniczenie na instancje smf_req
 
 % LOAD BALANCING: Obliczanie maksymalnego stopnia wykorzystania kanałów Erlanga
 constraint forall(k in 1..K)(
-    if x[k] > 0 then
-        sum(j in 1..J)(flow[j,k]) <= max_util * (erlang_table[x[k]])
-    else true endif
+  %  if x[k] > 0 then
+        x[k] <= max_util[k] * (erlang_table[x[k]]) %erlang_table[2] - wartosci kolumny N
+  %  else true endif
 );
+
 
 % --------------------------
 % 6. FUNKCJA CELU
@@ -157,7 +169,8 @@ solve minimize
 
 output [
   "======================================================\n",
-  "=== RAPORT SMF: MODEL KOLEJKOWY ERLANG B (B=1%) ===\n",
+  "=== RAPORT SMF: MODEL KOLEJKOWY ERLANG B (B=" ++ 
+(if scenario == 1 then "1.0%" elseif scenario == 2 then "0.1%" else "0.01%" endif) ++ ") ===\n",
   "======================================================\n",
   "1. STATYSTYKI RUCHU\n",
   "   Całkowite obciążenie sieci: " ++ show_float(7, 2, total_traffic) ++ " Erlangów\n\n",
