@@ -44,5 +44,5 @@ cost_per_instance = 10.0; % Koszt bazowy instancji
 % --- KONFIGURACJA WAG ---
 weight_cost = 10.0;     
 weight_latency = 50.0;  
-weight_balance = 0;%5.0; % Dodano lekką wagę balansu dla lepszego rozkładu
-scenario = 3; % Zmieniaj na 2 lub 3 dla kolejnych eksperymentów
+weight_balance = 0.0; % Dodano lekką wagę balansu dla lepszego rozkładu
+scenario = 1; % Zmieniaj na 2 lub 3 dla kolejnych eksperyment�w
